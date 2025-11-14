@@ -14,15 +14,17 @@ from src import collate_fn
 def main():
     set_seed(42)
     use_bf16 = False
-
+    seed = 42
+    test_size=seed
     # 1 데이터 로드 (이미지 데이터셋이면 이대로 OK)
     train_data, test_data, label2id, id2label, class_labels, image_key, video_key = prepare_deepfake_dataset(
         data_path=None,
         split="train",
-        data_files="/root/workspace/baseline/metadata.tsv",
+        data_files="/workspace/jiwon/Deepfake_killer-Video-image/train_data/metadata.tsv",
         delimiter="\t",
-        test_size=seed=42,
-    )
+        seed=seed,
+        test_size=test_size,
+    )   
 
     # 2 전처리 훅 부착 (이미지는 (1,3,H,W)로, 비디오는 (T,3,H,W)로 나오게)
     attach_media_transforms(
@@ -91,8 +93,8 @@ def main():
 
     args = TrainingArguments(
         output_dir="./outputs_video",
-        per_device_train_batch_size=4,
-        per_device_eval_batch_size=4,
+        per_device_train_batch_size=16,
+        per_device_eval_batch_size=16,
         learning_rate=1e-4,
         num_train_epochs=10,
         weight_decay=0.02,

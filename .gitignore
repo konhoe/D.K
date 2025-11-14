@@ -1,3 +1,4 @@
 model/**/*.safetensors
 model/**/*.bin
 model/**/*.pth
+train_data/

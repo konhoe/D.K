@@ -379,9 +379,9 @@ class UnifiedAdapterModel(nn.Module):
             img_feat = seq[idx, 0, :]                     # 이미지 → 첫 프레임
             img_logits = self.image_head(img_feat)
             if logits is None:
-                logits = img_logits.new_zeros((B, self.num_classes))
-            reps[idx] = img_feat
-            logits[idx] = img_logits
+                logits = seq.new_zeros((B, self.num_classes))
+            reps[idx] = img_feat.to(reps.dtype)
+            logits[idx] = img_logits.to(logits.dtype)
 
         if video_mask.any():
             idx = torch.nonzero(video_mask, as_tuple=False).squeeze(1)
@@ -410,9 +410,9 @@ class UnifiedAdapterModel(nn.Module):
                     vid_feat = (vid_seq * frame_mask.unsqueeze(-1).to(dtype=vid_seq.dtype)).sum(dim=1) / denom
             vid_logits = self.video_head(vid_feat)
             if logits is None:
-                logits = vid_logits.new_zeros((B, self.num_classes))
-            reps[idx] = vid_feat
-            logits[idx] = vid_logits
+                logits = seq.new_zeros((B, self.num_classes))
+            reps[idx] = vid_feat.to(reps.dtype)
+            logits[idx] = vid_logits.to(logits.dtype)
 
         if logits is None:
             logits = seq.new_zeros((B, self.num_classes))
@@ -483,7 +483,7 @@ class UnifiedAdapterModel(nn.Module):
         reps = feat.new_zeros((feat.size(0), feat.size(-1)))
         if (~video_mask).any():
             idx = torch.nonzero(~video_mask, as_tuple=False).squeeze(1)
-            reps[idx] = feat[idx, 0, :]
+            reps[idx] = feat[idx, 0, :].to(reps.dtype)
 
         if video_mask.any():
             idx = torch.nonzero(video_mask, as_tuple=False).squeeze(1)
@@ -507,13 +507,13 @@ class UnifiedAdapterModel(nn.Module):
             if pool == "attn":
                 if self.temporal_pool is None:
                     self.temporal_pool = TemporalAttentionPool(vid_seq.size(-1)).to(vid_seq.device)
-                reps[idx] = self.temporal_pool(vid_seq, mask=frame_mask)
+                reps[idx] = self.temporal_pool(vid_seq, mask=frame_mask).to(reps.dtype)
             elif pool == "mean":
                 if frame_mask is None:
-                    reps[idx] = vid_seq.mean(dim=1)
+                    reps[idx] = vid_seq.mean(dim=1).to(reps.dtype)
                 else:
                     denom = vid_lengths.unsqueeze(-1).to(dtype=vid_seq.dtype)
-                    reps[idx] = (vid_seq * frame_mask.unsqueeze(-1).to(dtype=vid_seq.dtype)).sum(dim=1) / denom
+                    reps[idx] = ((vid_seq * frame_mask.unsqueeze(-1).to(dtype=vid_seq.dtype)).sum(dim=1) / denom).to(reps.dtype)
             else:
                 raise ValueError(f"unknown pool: {pool}")
         return reps
