@@ -1,3 +1,5 @@
 model/**/*.safetensors
 model/**/*.bin
 model/**/*.pth
+
+.DS_Store

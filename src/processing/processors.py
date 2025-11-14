@@ -198,38 +198,65 @@ def build_media_transforms(
         return torch.stack(tens, dim=0)  # (T,3,H,W)
 
     def _prep_batch(examples, train: bool):
+        # 배치 길이 n 구하기
         n = None
         for k, v in examples.items():
             if isinstance(v, list):
                 n = len(v)
                 break
         if n is None:
-            # 빈 배치 방어
             examples["pixel_values"] = []
             return examples
 
         pix_list: List[torch.Tensor] = []
+
         for i in range(n):
             ten = None
-            # 1) 비디오 우선
+
+            # 1) 우선 path 하나를 뽑자 (video_key > image_key 순서로)
+            path: Optional[str] = None
+            img_payload = None
+
+            # video_key / image_key 둘 다 문자열 path일 수도 있고,
+            # image_key가 바로 이미지 payload일 수도 있으니 구분
             if video_key and (video_key in examples):
                 v = examples[video_key][i]
-                if isinstance(v, str) and v:
-                    ten = _prep_one_video(v, train=train)
+                if isinstance(v, str):
+                    path = v
+                else:
+                    img_payload = v
 
-            # 2) 이미지 폴백
-            if (ten is None) and image_key and (image_key in examples):
-                img_payload = examples[image_key][i]
-                if img_payload is not None:
+            if path is None and image_key and (image_key in examples):
+                v = examples[image_key][i]
+                if isinstance(v, str):
+                    path = v
+                else:
+                    img_payload = v
+
+            # 2) path가 문자열이면 확장자로 이미지/비디오 판단
+            if isinstance(path, str) and path:
+                lower = path.lower()
+                if lower.endswith((".mp4", ".avi", ".mov", ".mkv")):
+                    # 비디오로 처리
+                    ten = _prep_one_video(path, train=train)
+                elif lower.endswith((".jpg", ".jpeg", ".png", ".bmp", ".webp")):
+                    # 이미지로 처리
                     try:
-                        im = _to_pil(img_payload)
+                        im = _to_pil(path)
                         ten = _prep_one_image(im, train=train)
                     except Exception:
                         ten = None
 
-            # 3) 마지막 방어: 실패 시 스킵 대신 최소 더미(검정 프레임) 생성
+            # 3) path로 못 처리했으면, image payload가 있으면 이미지로 시도
+            if (ten is None) and (img_payload is not None):
+                try:
+                    im = _to_pil(img_payload)
+                    ten = _prep_one_image(im, train=train)
+                except Exception:
+                    ten = None
+
+            # 4) 마지막 방어: 그래도 실패하면 더미 프레임
             if ten is None:
-                # (T,3,H,W) 제로 텐서 — 배치 스택을 깨지 않기 위함
                 H = W = size
                 ten = torch.zeros((num_frames, 3, H, W), dtype=torch.float32)
 
@@ -237,6 +264,7 @@ def build_media_transforms(
 
         examples["pixel_values"] = pix_list
         return examples
+
 
     def train_transform(examples): return _prep_batch(examples, train=True)
     def val_transform(examples):   return _prep_batch(examples, train=False)
