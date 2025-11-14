@@ -44,7 +44,15 @@ def main():
     model = UnifiedAdapterModel(
         backbone=backbone,
         num_frames=12,              
-        temporal_pool="mean",
+        adapter_type="transformer",
+        adapter_kwargs=dict(
+            num_layers=2,
+            num_heads=8,
+            mlp_ratio=4.0,
+            dropout=0.1,
+            attn_dropout=0.1,
+        ),
+        temporal_pool="attn",
         head_hidden=1024,
         num_classes=len(class_labels.names),
         id2label=id2label,
@@ -70,7 +78,13 @@ def main():
         def compute_loss(self, model, inputs, return_outputs=False, **kwargs):
             x = inputs["pixel_values"]         # (B,T,3,H,W)
             y = inputs["labels"].long()        # (B,)
-            logits = model(x)                  # (B,num_classes)
+            media_type = inputs.get("media_type")
+            temporal_lengths = inputs.get("temporal_lengths")
+            logits = model(
+                x,
+                media_type=media_type,
+                temporal_lengths=temporal_lengths,
+            )                                   # (B,num_classes)
             loss = F.cross_entropy(logits, y, label_smoothing=0.1)
             return (loss, {"logits": logits}) if return_outputs else loss
 

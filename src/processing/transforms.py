@@ -12,6 +12,14 @@ def collate_fn(examples, expand_image_to_t: int | None = None):
     """
     xs = [ex["pixel_values"] for ex in examples]
     ys = torch.tensor([int(ex["label"]) for ex in examples], dtype=torch.long)
+    media = torch.tensor(
+        [int(ex.get("media_type", 0)) for ex in examples],
+        dtype=torch.bool,
+    )
+    temporal_lengths = torch.tensor(
+        [int(ex.get("temporal_length", 1)) for ex in examples],
+        dtype=torch.long,
+    )
 
     # 3D/4D 섞임 여부 확인
     ndims = [x.ndim for x in xs]
@@ -23,7 +31,12 @@ def collate_fn(examples, expand_image_to_t: int | None = None):
         if expand_image_to_t:
             B, C, H, W = x.shape
             x = x.unsqueeze(1).repeat(1, expand_image_to_t, 1, 1, 1)  # (B,T,3,H,W)
-        return {"pixel_values": x, "labels": ys}
+        return {
+            "pixel_values": x,
+            "labels": ys,
+            "media_type": media,
+            "temporal_lengths": temporal_lengths,
+        }
 
     # 비디오가 있는 배치 → 전부 (T,3,H,W)화
     proc = []
@@ -44,4 +57,9 @@ def collate_fn(examples, expand_image_to_t: int | None = None):
             padded.append(torch.cat([t, pad], dim=0))
 
     x = torch.stack(padded, dim=0)  # (B,T,3,H,W)
-    return {"pixel_values": x, "labels": ys}
+    return {
+        "pixel_values": x,
+        "labels": ys,
+        "media_type": media,
+        "temporal_lengths": temporal_lengths,
+    }

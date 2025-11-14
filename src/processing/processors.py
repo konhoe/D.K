@@ -206,16 +206,27 @@ def build_media_transforms(
         if n is None:
             # 빈 배치 방어
             examples["pixel_values"] = []
+            examples["media_type"] = []
+            examples["temporal_length"] = []
             return examples
 
         pix_list: List[torch.Tensor] = []
+        media_types: List[int] = []
+        temporal_lengths: List[int] = []
         for i in range(n):
             ten = None
+            media_flag = 0  # 0=image, 1=video
+            temporal_len = 1
+            candidate_is_video = False
             # 1) 비디오 우선
             if video_key and (video_key in examples):
                 v = examples[video_key][i]
                 if isinstance(v, str) and v:
+                    candidate_is_video = True
                     ten = _prep_one_video(v, train=train)
+                    if ten is not None:
+                        media_flag = 1
+                        temporal_len = int(ten.shape[0])
 
             # 2) 이미지 폴백
             if (ten is None) and image_key and (image_key in examples):
@@ -224,6 +235,8 @@ def build_media_transforms(
                     try:
                         im = _to_pil(img_payload)
                         ten = _prep_one_image(im, train=train)
+                        media_flag = 0
+                        temporal_len = 1
                     except Exception:
                         ten = None
 
@@ -232,10 +245,16 @@ def build_media_transforms(
                 # (T,3,H,W) 제로 텐서 — 배치 스택을 깨지 않기 위함
                 H = W = size
                 ten = torch.zeros((num_frames, 3, H, W), dtype=torch.float32)
+                temporal_len = 1
+                media_flag = 1 if candidate_is_video else 0
 
             pix_list.append(ten)
+            media_types.append(media_flag)
+            temporal_lengths.append(temporal_len)
 
         examples["pixel_values"] = pix_list
+        examples["media_type"] = media_types
+        examples["temporal_length"] = temporal_lengths
         return examples
 
     def train_transform(examples): return _prep_batch(examples, train=True)
