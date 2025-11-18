@@ -184,7 +184,6 @@ def build_media_transforms(
         tfm = train_img_tfm if train else val_img_tfm
         im = _maybe_face_crop(im, do_face_crop)
         t = tfm(im)                         # (3,H,W)
-        t = t.unsqueeze(0).repeat(num_frames, 1, 1, 1)  # (T,3,H,W)로 복제
         return t
 
     def _prep_one_video(path: str, train: bool) -> Optional[torch.Tensor]:

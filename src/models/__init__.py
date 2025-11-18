@@ -1,10 +1,11 @@
-from .adapter import UnifiedAdapterModel, TemporalConvAdapter, TemporalAttentionPool, MLPHead
+from .adapter import ImageAdapter, TemporalAdapter, VideoAdapter
 from .clip_backbone import ClipBackbone
+from .model import DeepfakeModel
 
 __all__ = [
-    "UnifiedAdapterModel",
-    "TemporalConvAdapter",
-    "TemporalAttentionPool",
-    "MLPHead",
+    "ImageAdapter",
+    "TemporalAdapter",
+    "VideoAdapter",
     "ClipBackbone",
+    "DeepfakeModel"
 ]
