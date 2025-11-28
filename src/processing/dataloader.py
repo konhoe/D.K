@@ -1,0 +1,141 @@
+from __future__ import annotations
+import warnings, os
+warnings.filterwarnings("ignore")
+
+from typing import Tuple, Dict, Optional, List
+from datasets import load_dataset, Dataset, ClassLabel, DatasetDict
+
+from .processors import get_clip_processor, build_media_transforms
+from .transforms import collate_fn  # 우리가 아까 만든 (stage, video_frames) 인자 받는 버전
+
+VIDEO_COL_CANDIDATES: List[str] = ["video_path", "video", "filepath", "path", "file"]
+IMAGE_COL_CANDIDATES: List[str] = ["image", "img", "pixel_values"]
+
+
+def _pick_first_col(cols: List[str], candidates: List[str]) -> Optional[str]:
+    for c in candidates:
+        if c in cols:
+            return c
+    return None
+
+
+def _derive_label(example) -> Dict:
+    if "label_id" in example:
+        try:
+            return {"label": int(example["label_id"])}
+        except Exception:
+            pass
+    if "answer" in example and isinstance(example["answer"], str):
+        tok = example["answer"].strip().split()[0].upper()
+        if tok in ["REAL", "FAKE"]:
+            return {"label": 0 if tok == "REAL" else 1}
+    if "label" in example:
+        v = example["label"]
+        if isinstance(v, int):
+            return {"label": v}
+        if isinstance(v, str):
+            vv = v.strip().lower()
+            if vv in ["real", "fake"]:
+                return {"label": 0 if vv == "real" else 1}
+    return {"label": None}
+
+
+def _has_valid_media_factory(image_key: Optional[str], video_key: Optional[str]):
+    def _fn(ex):
+        ok_img = False
+        ok_vid = False
+        if image_key is not None and ex.get(image_key) is not None:
+            ok_img = True
+        if video_key is not None:
+            vp = ex.get(video_key)
+            ok_vid = isinstance(vp, str) and len(vp) > 0 and os.path.exists(vp)
+        return ok_img or ok_vid
+    return _fn
+
+
+def prepare_deepfake_dataset(
+    data_path: Optional[str] = None,
+    split: str = "train",
+    test_size: float = 0.2,
+    seed: int = 42,
+    label_names: Optional[list] = None,
+    *,
+    data_files: Optional[str | dict] = None,
+    delimiter: Optional[str] = None,
+    cache_dir: Optional[str] = None,
+) -> Tuple[Dataset, Dataset, Dict[str, int], Dict[int, str], ClassLabel, Optional[str], Optional[str]]:
+    if data_files is not None:
+        loader_name = "csv"
+        kwargs = {"data_files": data_files, "split": "train"}
+        if delimiter:
+            kwargs["delimiter"] = delimiter
+        if cache_dir:
+            kwargs["cache_dir"] = cache_dir
+        ds: Dataset = load_dataset(loader_name, **kwargs)
+    else:
+        if data_path is None:
+            raise ValueError("data_path 또는 data_files 중 하나는 필요해.")
+        ds: Dataset = load_dataset(data_path, split=split, cache_dir=cache_dir)
+
+    cols = ds.column_names
+
+    ds = ds.map(_derive_label, batched=False)
+    ds = ds.filter(lambda ex: ex["label"] is not None)
+
+    image_key = _pick_first_col(cols, IMAGE_COL_CANDIDATES)
+    video_key = _pick_first_col(cols, VIDEO_COL_CANDIDATES)
+    if image_key is None and video_key is None:
+        raise ValueError(f"'image'나 'video_path' 계열 컬럼이 없어. columns={cols}")
+
+    ds = ds.filter(_has_valid_media_factory(image_key, video_key))
+
+    if isinstance(ds.features.get("label"), ClassLabel) and label_names is None:
+        class_labels: ClassLabel = ds.features["label"]
+    else:
+        if label_names is None:
+            label_names = ["real", "fake"]
+        class_labels = ClassLabel(num_classes=len(label_names), names=label_names)
+
+    id2label = {i: name for i, name in enumerate(class_labels.names)}
+    label2id = {name: i for i, name in id2label.items()}
+
+    def _map_label2id(example):
+        v = example["label"]
+        if isinstance(v, int):
+            return {"label": v}
+        return {"label": class_labels.str2int(v)}
+
+    ds = ds.map(_map_label2id, batched=False)
+    ds = ds.cast_column("label", class_labels)
+
+    dsd: DatasetDict = ds.train_test_split(
+        test_size=test_size, shuffle=True, stratify_by_column="label", seed=seed
+    )
+    train_data: Dataset = dsd["train"]
+    test_data: Dataset = dsd["test"]
+
+    return train_data, test_data, label2id, id2label, class_labels, image_key, video_key
+
+
+def get_collate_fn_stage1():
+    """
+    Stage-1 (이미지 + 비디오 중앙 프레임 1장) 용:
+      - pixel_values: (B,3,H,W)
+    """
+    return lambda examples: collate_fn(examples, stage="stage1")
+
+
+def get_collate_fn_stage2(video_frames: int = 12):
+    """
+    Stage-2 (비디오 full T프레임) 용:
+      - pixel_values: (B,T,3,H,W)
+    """
+    return lambda examples: collate_fn(examples, stage="stage2", video_frames=video_frames)
+
+
+__all__ = [
+    "prepare_deepfake_dataset",
+    "collate_fn",
+    "get_collate_fn_stage1",
+    "get_collate_fn_stage2",
+]
