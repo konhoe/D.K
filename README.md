@@ -146,6 +146,7 @@ Apart from the 3-stage pipeline above, we also conducted a **separate experiment
 
 ---
 
+
 ## 🖨️ Result & Observations
 
 We qualitatively evaluated the model on:
@@ -167,6 +168,14 @@ the model tends to:
 but the tendency to treat “over-edited real faces” as suspicious remains a systematic bias.
 
 ---
+## ⚙️ Installation
+
+```bash
+git clone https://github.com/<your-org-or-id>/<your-repo-name>.git
+cd <your-repo-name>
+
+# Install dependencies
+task.ipynb
 ## ⚙️ Installation
 
 ```bash
