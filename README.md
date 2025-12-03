@@ -89,20 +89,20 @@ The overall goal is to obtain a **robust, generalizable, and computation-friendl
 
 ## 📁 Repository Structure
 
-> (This section matches the actual file names in this repo. Adjust paths if you rearrange things.)
 
 - `clip_backbone.py`  
   CLIP visual backbone wrapper (e.g., ViT-L/14) and feature extraction.
 - `adapter.py`  
   D2ST spatio-temporal adapter (2D→3D feature lifting, temporal attention).
 - `transforms.py`  
-  Image & video data transforms (augmentation, normalization, frame sampling).
+  Make batch tensor (Each Image & Video)
 - `video_utils.py`  
   Video decoding / frame sampling utilities (T=1 or T=12).
 - `dataloader.py`  
   PyTorch `Dataset` / `DataLoader` definitions for images and videos.
 - `processors.py`  
   Pre- / post-processing utilities (e.g., cropping, face alignment, label mapping).
+  Image & video data transforms (augmentation, normalization, frame sampling).
 - `cache.py`  
   Optional caching utilities for precomputed features or frame sampling metadata.
 - `train.py`  
@@ -120,9 +120,5 @@ The overall goal is to obtain a **robust, generalizable, and computation-friendl
 git clone https://github.com/<your-org-or-id>/<your-repo-name>.git
 cd <your-repo-name>
 
-# (Optional) create conda env
-conda create -n d2st-deepfake python=3.10 -y
-conda activate d2st-deepfake
-
 # Install dependencies
-pip install -r requirements.txt
+task.ipynb 
