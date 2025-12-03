@@ -146,6 +146,27 @@ Apart from the 3-stage pipeline above, we also conducted a **separate experiment
 
 ---
 
+## 🖨️ Result & Observations
+
+We qualitatively evaluated the model on:
+	1.	Unedited real images of ordinary people
+	2.	Edited / retouched images, such as:
+	•	celebrity portraits,
+	•	images with heavy beauty filters,
+	•	skin smoothing, reshaping, or strong color/contrast edits
+	3.	Additional public deepfake / forgery datasets (images & videos)
+
+Key observations:
+	•	On non-edited real images (daily photos without strong post-processing),
+the model detects “real” very well and rarely misclassifies them as fake.
+	•	On edited / beautified images (e.g., celebrity photos, heavy filters, retouching),
+the model tends to:
+	•	confuse them with fakes, or
+	•	assign a high fake probability, even though they are real but aesthetically processed.
+	•	On standard deepfake datasets, the model behaves as a reasonable CLIP-based baseline with temporal modeling,
+but the tendency to treat “over-edited real faces” as suspicious remains a systematic bias.
+
+---
 ## ⚙️ Installation
 
 ```bash
