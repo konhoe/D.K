@@ -26,6 +26,15 @@ The overall goal is to obtain a **robust, generalizable, and computation-friendl
 
 > Our design is inspired by CLIP-based forgery detection and adapter-style methods such as **Forensics Adapter**.  [oai_citation:0‡Cui_Forensics_Adapter_Adapting_CLIP_for_Generalizable_Face_Forgery_Detection_CVPR_2025_paper.pdf](file-service://file-6sXz1BTJznq7zy8bkD7Jqa)  
 
+
+---
+
+## 📋
+- **Data structure**
+<img width="253" height="205" alt="image" src="https://github.com/user-attachments/assets/42f2cae9-2c11-4df5-ac5b-6a27b62b1eda" />
+<img width="275" height="205" alt="image" src="https://github.com/user-attachments/assets/001a66c3-ae10-44e7-9e98-1b6dc3768a49" />
+
+
 ---
 
 ## 🧱 Model Architecture
